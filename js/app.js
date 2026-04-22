@@ -4,6 +4,7 @@ createApp({
     setup() {
         const files = ref([]);
         const filename = ref('');
+        const tipo = ref(CfdiExcelExporter.TIPO_INGRESO_EGRESO);
         const processing = ref(false);
         const error = ref('');
         const success = ref('');
@@ -23,7 +24,8 @@ createApp({
             processing.value = true;
             try {
                 const cfdis = await parseAllFiles(files.value);
-                const downloadedName = new CfdiExcelExporter(cfdis).download(filename.value);
+                validateTipos(cfdis, tipo.value);
+                const downloadedName = new CfdiExcelExporter(cfdis, tipo.value).download(filename.value);
                 success.value = `Se generó ${downloadedName} con ${cfdis.length} CFDI(s).`;
             } catch (err) {
                 console.error(err);
@@ -41,7 +43,7 @@ createApp({
             if (fileInput.value) fileInput.value.value = '';
         }
 
-        return { files, filename, processing, error, success, fileInput, handleFiles, generateExcel, reset };
+        return { files, filename, tipo, processing, error, success, fileInput, handleFiles, generateExcel, reset };
     }
 }).mount('#app');
 
@@ -56,4 +58,12 @@ async function parseAllFiles(fileList) {
         }
     }
     return cfdis;
+}
+
+function validateTipos(cfdis, tipo) {
+    const permitidos = tipo === CfdiExcelExporter.TIPO_NOMINA ? ['N'] : ['I', 'E'];
+    const incompatibles = cfdis.some(c => !permitidos.includes(c.tipoCodigo));
+    if (incompatibles) {
+        throw new Error('Existen CFDI de diferente tipo al seleccionado. Procura subir archivos del mismo tipo.');
+    }
 }

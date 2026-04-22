@@ -5,7 +5,7 @@
  * no los trae en la raíz.
  */
 class Cfdi {
-    static TIPO_COMPROBANTE = { I: 'Ingreso', E: 'Egreso', P: 'Pago' };
+    static TIPO_COMPROBANTE = { I: 'Ingreso', E: 'Egreso', P: 'Pago', N: 'Nomina' };
 
     static COLUMNS = [
         'Version', 'Tipo De Comprobante', 'Fecha Emision', 'Serie', 'Folio', 'UUID',
@@ -13,6 +13,18 @@ class Cfdi {
         'Subtotal', 'Descuento', 'Retenido IEPS', 'Retenido IVA', 'Retenido ISR',
         'Traslado IVA 16%', 'Total Impuestos Trasladados', 'Total Impuestos Retenidos',
         'Total', 'Moneda', 'Tipo De Cambio', 'Forma de pago', 'Metodo de Pago', 'Conceptos'
+    ];
+
+    static COLUMNS_NOMINA = [
+        'Version CFDI', 'UUID', 'Fecha Emision', 'Serie', 'Folio',
+        'RFC Emisor', 'Nombre Emisor', 'Registro Patronal',
+        'RFC Receptor', 'Nombre Receptor', 'CURP', 'NSS',
+        'Num Empleado', 'Departamento', 'Puesto', 'Tipo Contrato',
+        'Periodicidad de Pago', 'Salario Diario Integrado',
+        'Tipo Nomina', 'Fecha Pago', 'Fecha Inicial Pago', 'Fecha Final Pago',
+        'Dias Pagados', 'Total Percepciones', 'Total Sueldos', 'Total Gravado',
+        'Total Exento', 'Total Deducciones', 'Total Otros Pagos',
+        'Subtotal', 'Descuento', 'Total'
     ];
 
     static CODIGO_IMPUESTO = { ISR: '001', IVA: '002', IEPS: '003' };
@@ -39,8 +51,10 @@ class Cfdi {
     get formaPago() { return this.#attr(this.#root, 'FormaPago'); }
     get metodoPago() { return this.#attr(this.#root, 'MetodoPago'); }
 
+    get tipoCodigo() { return this.#attr(this.#root, 'TipoDeComprobante'); }
+
     get tipoDeComprobante() {
-        const raw = this.#attr(this.#root, 'TipoDeComprobante');
+        const raw = this.tipoCodigo;
         return Cfdi.TIPO_COMPROBANTE[raw] || raw;
     }
 
@@ -92,6 +106,51 @@ class Cfdi {
     }
 
     /**
+     * Devuelve los valores del CFDI de nómina en el orden de Cfdi.COLUMNS_NOMINA.
+     */
+    toNominaRow() {
+        const n = this.#nomina;
+        const nEmisor = this.#nominaEmisor;
+        const nReceptor = this.#nominaReceptor;
+        const nPercepciones = this.#nominaPercepciones;
+
+        return [
+            this.version,
+            this.uuid,
+            this.fecha,
+            this.serie,
+            this.folio,
+            this.rfcEmisor,
+            this.nombreEmisor,
+            this.#attr(nEmisor, 'RegistroPatronal'),
+            this.rfcReceptor,
+            this.nombreReceptor,
+            this.#attr(nReceptor, 'Curp'),
+            this.#attr(nReceptor, 'NumSeguridadSocial'),
+            this.#attr(nReceptor, 'NumEmpleado'),
+            this.#attr(nReceptor, 'Departamento'),
+            this.#attr(nReceptor, 'Puesto'),
+            this.#attr(nReceptor, 'TipoContrato'),
+            this.#attr(nReceptor, 'PeriodicidadPago'),
+            this.#attr(nReceptor, 'SalarioDiarioIntegrado'),
+            this.#attr(n, 'TipoNomina'),
+            this.#attr(n, 'FechaPago'),
+            this.#attr(n, 'FechaInicialPago'),
+            this.#attr(n, 'FechaFinalPago'),
+            this.#attr(n, 'NumDiasPagados'),
+            this.#attr(n, 'TotalPercepciones'),
+            this.#attr(nPercepciones, 'TotalSueldos'),
+            this.#attr(nPercepciones, 'TotalGravado'),
+            this.#attr(nPercepciones, 'TotalExento'),
+            this.#attr(n, 'TotalDeducciones'),
+            this.#attr(n, 'TotalOtrosPagos'),
+            this.subTotal,
+            this.descuento,
+            this.total,
+        ];
+    }
+
+    /**
      * Devuelve los valores del CFDI en el orden de Cfdi.COLUMNS para
      * alimentar directo al exportador de Excel.
      */
@@ -133,6 +192,22 @@ class Cfdi {
 
     get #timbreFiscalDigital() {
         return this.#complemento ? this.#child(this.#complemento, 'TimbreFiscalDigital') : null;
+    }
+
+    get #nomina() {
+        return this.#complemento ? this.#child(this.#complemento, 'Nomina') : null;
+    }
+
+    get #nominaEmisor() {
+        return this.#nomina ? this.#child(this.#nomina, 'Emisor') : null;
+    }
+
+    get #nominaReceptor() {
+        return this.#nomina ? this.#child(this.#nomina, 'Receptor') : null;
+    }
+
+    get #nominaPercepciones() {
+        return this.#nomina ? this.#child(this.#nomina, 'Percepciones') : null;
     }
 
     get #conceptos() {
