@@ -7,6 +7,7 @@ class CfdiExcelExporter {
     static DEFAULT_FILENAME = 'cfdis';
     static TIPO_NOMINA = 'nomina';
     static TIPO_INGRESO_EGRESO = 'ingreso-egreso';
+    static TIPO_PAGOS = 'pagos';
 
     #cfdis;
     #tipo;
@@ -27,13 +28,41 @@ class CfdiExcelExporter {
     }
 
     #buildWorkbook() {
-        const esNomina = this.#tipo === CfdiExcelExporter.TIPO_NOMINA;
-        const columns = esNomina ? Cfdi.COLUMNS_NOMINA : Cfdi.COLUMNS;
-        const rows = [columns, ...this.#cfdis.map(cfdi => esNomina ? cfdi.toNominaRow() : cfdi.toRow())];
+        let columns, rows;
+
+        if (this.#tipo === CfdiExcelExporter.TIPO_NOMINA) {
+            columns = Cfdi.COLUMNS_NOMINA;
+            rows = [columns, ...this.#cfdis.map(cfdi => cfdi.toNominaRow())];
+        } else if (this.#tipo === CfdiExcelExporter.TIPO_PAGOS) {
+            columns = Cfdi.COLUMNS_PAGOS;
+            rows = [columns, ...this.#buildPagosRows()];
+        } else {
+            columns = Cfdi.COLUMNS;
+            rows = [columns, ...this.#cfdis.map(cfdi => cfdi.toRow())];
+        }
+
         const worksheet = XLSX.utils.aoa_to_sheet(rows);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, CfdiExcelExporter.SHEET_NAME);
         return workbook;
+    }
+
+    #buildPagosRows() {
+        const allRows = [];
+        let numeroPagoActual = 1;
+
+        for (const cfdi of this.#cfdis) {
+            const rows = cfdi.toPagosRows(numeroPagoActual);
+            allRows.push(...rows);
+
+            const pagosCount = cfdi.toPagosRows(numeroPagoActual).filter((row, idx, arr) => {
+                return idx === 0 || row[0] !== arr[idx - 1][0];
+            }).length;
+
+            numeroPagoActual += pagosCount;
+        }
+
+        return allRows;
     }
 
     #sanitizeFilename(filename) {
