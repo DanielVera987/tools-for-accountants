@@ -61,7 +61,14 @@ async function parseAllFiles(fileList) {
 }
 
 function validateTipos(cfdis, tipo) {
-    const permitidos = tipo === CfdiExcelExporter.TIPO_NOMINA ? ['N'] : ['I', 'E'];
+    let permitidos;
+    if (tipo === CfdiExcelExporter.TIPO_NOMINA) {
+        permitidos = ['N'];
+    } else if (tipo === CfdiExcelExporter.TIPO_PAGOS) {
+        permitidos = ['P'];
+    } else {
+        permitidos = ['I', 'E'];
+    }
     const incompatibles = cfdis.some(c => !permitidos.includes(c.tipoCodigo));
     if (incompatibles) {
         throw new Error('Existen CFDI de diferente tipo al seleccionado. Procura subir archivos del mismo tipo.');
